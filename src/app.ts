@@ -5,7 +5,6 @@ import cors from 'cors'
 import appRouter from "./routes";
 
 // Main express entry point file:
-
 export function createApp() {
     const app = express();
 
