@@ -3,6 +3,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { notFound } from "./middlewares/notFound";
 import cors from "cors";
 import appRouter from "./routes";
+import { logger } from "./lib/logger";
 
 // Main express app configuration file for middleware and routes mounting:
 export function createApp() {
@@ -13,6 +14,7 @@ export function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.use("/api", appRouter);
+
   app.get("/", (req: Request, res: Response) => {
     res.status(200).json({ success: true, message: "Server is running..." });
   });
