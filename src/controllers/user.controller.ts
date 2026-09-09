@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../lib/db";
 import { CreateUserSchema } from "../validations/user.validation";
-import z from "zod";
+import z, { success } from "zod";
+import { cloudinary } from "../lib/cloudinary";
 
 export async function createUser(
   req: Request,
@@ -60,7 +61,7 @@ export async function getAllUsers(
 ) {
   try {
     const users = await pool.query(
-      "SELECT id, name, email, age, balance, bio, preferences, is_active, created_at from users ORDER BY id",
+      "SELECT id, name, email, age, balance, bio, preferences, is_active, profile_picture_url, created_at from users ORDER BY id",
     );
 
     res.status(200).json({
@@ -94,6 +95,49 @@ export async function getUserById(
       message: "Users fetched successfully",
       data: users.rows[0],
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function uploadUserProfilePicture(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res
+        .status(400)
+        .json({ success: false, error: "No image file provided." });
+    }
+    // We upload buffer to cloudinary through stream.
+    const uploadResult = await new Promise<any>((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "profile_pictures",
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        },
+      );
+
+      stream.end(req.file!.buffer);
+    });
+
+    const imageUrl = uploadResult.secure_url;
+    const dbResult = await pool.query(
+      "UPDATE users SET profile_picture_url = $1 WHERE id = $2 RETURNING id, name, email, profile_picture_url",
+      [imageUrl, id],
+    );
+
+    if (dbResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
+    res.status(200).json({ success: true, data: dbResult.rows[0] });
   } catch (error) {
     next(error);
   }
