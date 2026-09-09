@@ -1,14 +1,17 @@
 import pino from "pino";
 import { env } from "../config/env";
 
+// Pino Logger setup:
 export const logger = pino({
-    level: env.logLevel,
-    transport: env.isProduction ? undefined : {
-        target: 'pino-pretty',
+  level: env.logLevel,
+  transport: env.isProduction
+    ? undefined
+    : {
+        target: "pino-pretty",
         options: {
-            colorize: true,          // Adds color-coding to log levels
-            translateTime: 'SYS:standard', // Human-readable timestamp format
-            // ignore: 'pid,hostname', // Removes distracting process IDs and hostnames
+          colorize: true, // Adds color-coding to log levels
+          translateTime: "SYS:standard", // Human-readable timestamp format
+          // ignore: 'pid,hostname', // Removes distracting process IDs and hostnames
         },
-    }
+      },
 });
