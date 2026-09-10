@@ -3,6 +3,7 @@ import {
   createUser,
   getAllUsers,
   getUserById,
+  uploadUserImages,
   uploadUserProfilePicture,
 } from "../controllers/user.controller";
 import { upload } from "../middlewares/uploads";
@@ -19,4 +20,9 @@ usersRouter.post(
   uploadUserProfilePicture,
 );
 
+usersRouter.post(
+  "/user/:id/user-images",
+  upload.array("user-images"),
+  uploadUserImages,
+);
 export default usersRouter;
