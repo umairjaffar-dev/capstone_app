@@ -11,6 +11,7 @@ export const env = {
   isProduction: (process.env.NODE_ENV ?? "development") === "production",
   nodeEnv: process.env.NODE_ENV ?? "development",
   logLevel: process.env.LOG_LEVEL ?? "info",
+  storageDriver: process.env.STORAGE_DRIVER ?? "local",
   databaseUrl: process.env.DATABASE_URL,
   cloudinary: {
     cloudName: process.env.CLOUDINARY_CLOUD_NAME,

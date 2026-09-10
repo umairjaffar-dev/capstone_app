@@ -3,7 +3,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { notFound } from "./middlewares/notFound";
 import cors from "cors";
 import appRouter from "./routes";
-import { logger } from "./lib/logger";
+import path from "node:path";
 
 // Main express app configuration file for middleware and routes mounting:
 export function createApp() {
@@ -12,6 +12,7 @@ export function createApp() {
   app.use(express.json());
   app.use(cors());
   app.use(express.urlencoded({ extended: true }));
+  app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
   app.use("/api", appRouter);
 
