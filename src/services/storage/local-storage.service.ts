@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
-import { FileStorage, StoredFile } from "./storage.types";
+import { FileStorage, StoredFile } from "../../types/storage.types";
 import { env } from "../../config/env";
 
 const uploadDirectory = path.join(process.cwd(), "uploads", "user_images");

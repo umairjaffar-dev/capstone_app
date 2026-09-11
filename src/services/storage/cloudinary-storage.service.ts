@@ -1,5 +1,5 @@
 import { cloudinary } from "../../config/cloudinary";
-import { FileStorage, StoredFile } from "./storage.types";
+import { FileStorage, StoredFile } from "../../types/storage.types";
 
 export class CloudinaryStorage implements FileStorage {
   async save(file: Express.Multer.File): Promise<StoredFile> {
