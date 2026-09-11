@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import { FileStorage, StoredFile } from "./storage.types";
+import { env } from "../../config/env";
 
 const uploadDirectory = path.join(process.cwd(), "uploads", "user_images");
 
@@ -19,8 +20,10 @@ export class LocalStorage implements FileStorage {
 
     await fs.writeFile(filePath, file.buffer);
 
+    const imageUrl = `${env.appUrl}uploads/user_images/${fileName}`;
+
     return {
-      url: `/uploads/user_images/${fileName}`,
+      url: imageUrl,
       key: fileName,
     };
   }
