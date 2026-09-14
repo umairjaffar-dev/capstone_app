@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import { pool } from "../lib/db";
-import { CreateUserSchema } from "../validations/user.validation";
+import { CreateUserSchema, UserIdParamSchema } from "../schemas/user.schema";
 import z from "zod";
 import { storage } from "../services/storage/storage.service";
+import { formatZodError } from "../utils/formatZodError";
+import { userService } from "../services/user.service";
 
 export async function createUser(
   req: Request,
@@ -13,12 +15,7 @@ export async function createUser(
     const parseResult = CreateUserSchema.safeParse(req.body);
 
     if (!parseResult.success) {
-      //   const formattedErrors = parseResult.error.issues.map((issue) => ({
-      //     field: issue.path.join(".") || "root",
-      //     message: issue.message,
-      //   }));
-
-      const { fieldErrors } = z.flattenError(parseResult.error);
+      const fieldErrors = formatZodError(parseResult.error, req.body);
       return res.status(400).json({
         success: false,
         error: "Validation failed",
@@ -26,28 +23,12 @@ export async function createUser(
       });
     }
 
-    const { name, email, age, is_active, bio, balance, preferences } =
-      parseResult.data;
-
-    const user = await pool.query(
-      `INSERT INTO users (name, email, age, is_active, bio, balance, preferences) 
-      VALUES ($1, $2, $3, COALESCE($4, false), $5, COALESCE($6, 0), $7) 
-      RETURNING id, name, email, age, is_active, bio, balance, preferences, created_at`,
-      [
-        name,
-        email,
-        age,
-        is_active,
-        bio ?? null,
-        balance,
-        preferences ? JSON.stringify(preferences) : null,
-      ],
-    );
+    const user = await userService.createUser(parseResult.data);
 
     res.status(201).json({
       success: true,
       message: "User created successfully",
-      data: user.rows[0],
+      data: user,
     });
   } catch (error) {
     next(error);
@@ -55,19 +36,16 @@ export async function createUser(
 }
 
 export async function getAllUsers(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const users = await pool.query(
-      "SELECT id, name, email, age, balance, bio, preferences, is_active, profile_picture_url, created_at from users ORDER BY id",
-    );
-
+    const users = await userService.getAllUsers();
     res.status(200).json({
       success: true,
       message: "Users fetched successfully",
-      data: users.rows,
+      data: users,
     });
   } catch (error) {
     next(error);
@@ -75,25 +53,32 @@ export async function getAllUsers(
 }
 
 export async function getUserById(
-  req: Request,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ) {
-  const { id } = req.params;
-  try {
-    const users = await pool.query(
-      "SELECT id, name, email, age, balance, bio, preferences, is_active, created_at from users WHERE id=$1",
-      [id],
-    );
+  const parseResult = UserIdParamSchema.safeParse(req.params);
 
-    if (users.rows.length === 0) {
+  if (!parseResult.success) {
+    const fieldErrors = formatZodError(parseResult.error, req.params);
+    return res.status(400).json({
+      success: false,
+      error: "Validation failed",
+      details: fieldErrors,
+    });
+  }
+
+  try {
+    const user = await userService.getUserById(parseResult.data.id);
+
+    if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
 
     res.status(200).json({
       success: true,
       message: "Users fetched successfully",
-      data: users.rows[0],
+      data: user,
     });
   } catch (error) {
     next(error);
@@ -101,12 +86,29 @@ export async function getUserById(
 }
 
 export async function uploadUserProfilePicture(
-  req: Request,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ) {
   try {
-    const { id } = req.params;
+    const parseResult = UserIdParamSchema.safeParse(req.params);
+
+    // Check the user id (Valid or invalid)
+    if (!parseResult.success) {
+      const fieldErrors = formatZodError(parseResult.error, req.params);
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: fieldErrors,
+      });
+    }
+
+    // Check the user existance here:
+    const existingUser = await userService.getUserById(parseResult.data.id);
+    if (!existingUser) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+
     if (!req.file) {
       return res
         .status(400)
@@ -114,18 +116,18 @@ export async function uploadUserProfilePicture(
     }
     // We upload buffer to cloudinary through stream.
     const storedFile = await storage.save(req.file);
-
-    const imageUrl = storedFile.url;
-    const dbResult = await pool.query(
-      "UPDATE users SET profile_picture_url = $1 WHERE id = $2 RETURNING id, name, email, profile_picture_url",
-      [imageUrl, id],
+    const dbResult = await userService.updateProfilePicture(
+      parseResult.data.id,
+      storedFile.url,
     );
 
-    if (dbResult.rows.length === 0) {
-      return res.status(404).json({ success: false, error: "User not found" });
+    if (!dbResult) {
+      return res
+        .status(404)
+        .json({ success: false, error: "File upload failed!" });
     }
 
-    res.status(200).json({ success: true, data: dbResult.rows[0] });
+    res.status(200).json({ success: true, data: dbResult });
   } catch (error) {
     next(error);
   }
@@ -137,8 +139,17 @@ export async function uploadUserImages(
   next: NextFunction,
 ) {
   try {
-    const { id } = req.params;
-    const files = req.files as Express.Multer.File[];
+    const parseResult = UserIdParamSchema.safeParse(req.params);
+    if (!parseResult.success) {
+      const fieldErrors = formatZodError(parseResult.error, req.params);
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: fieldErrors,
+      });
+    }
+
+    const files = req.files as Express.Multer.File[] | undefined;
 
     if (!files || files.length === 0) {
       return res
@@ -146,41 +157,26 @@ export async function uploadUserImages(
         .json({ success: false, error: "No image files provided" });
     }
 
-    const userResult = await pool.query(
-      `
-        SELECT id
-        FROM users
-        WHERE id = $1
-      `,
-      [id],
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "User not found",
-      });
+    const existingUser = await userService.getUserById(parseResult.data.id);
+    if (!existingUser) {
+      return res.status(404).json({ success: false, error: "User not found" });
     }
 
     const storedFiles = await storage.saveMany(files);
+    const imageUrls = storedFiles.map((file) => file.url);
 
-    for (const file of storedFiles) {
-      await pool.query(
-        ` INSERT INTO user_images (user_id, image_url)
-      VALUES ($1, $2)`,
-        [id, file.url],
-      );
-    }
+    const images = await userService.addUserImages(
+      parseResult.data.id,
+      imageUrls,
+    );
 
     return res.status(201).json({
       success: true,
       message: "Images uploaded successfully",
+
       data: {
-        userId: id,
-        data: {
-          userId: id,
-          images: storedFiles.map((file) => file.url),
-        },
+        userId: parseResult.data.id,
+        images: images.map((image) => image.image_url),
       },
     });
   } catch (error) {
