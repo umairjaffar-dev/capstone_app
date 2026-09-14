@@ -1,7 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { pool } from "../lib/db";
 import { CreateUserSchema, UserIdParamSchema } from "../schemas/user.schema";
-import z from "zod";
 import { storage } from "../services/storage/storage.service";
 import { formatZodError } from "../utils/formatZodError";
 import { userService } from "../services/user.service";
@@ -42,6 +40,14 @@ export async function getAllUsers(
 ) {
   try {
     const users = await userService.getAllUsers();
+
+    // res.cookie("token", "xuznd-fhdjdf-2342342-dfgdfg", {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === "production",
+    //   sameSite: "strict",
+    //   maxAge: 24 * 60 * 60 * 1000, // 1 day
+    // });
+
     res.status(200).json({
       success: true,
       message: "Users fetched successfully",
