@@ -5,12 +5,14 @@ import healthRouter from "./health.route";
 import testRouter from "./test.route";
 import usersRouter from "./users.route";
 import postRouter from "./posts.route";
+import authRouter from "./auth.route";
 
 const appRouter = Router();
 
 appRouter.use(healthRouter);
 appRouter.use(testRouter);
 appRouter.use(usersRouter);
+appRouter.use(authRouter);
 appRouter.use(postRouter);
 
 export default appRouter;

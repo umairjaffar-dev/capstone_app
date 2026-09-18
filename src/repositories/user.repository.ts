@@ -1,16 +1,62 @@
 import { pool } from "../lib/db";
 import { logger } from "../lib/logger";
+import { CreateUserSchemaType } from "../schemas/user.schema";
+import { AuthUserWithPassword, RegisterUserData } from "../types/auth.types";
 import {
-  NewUserData,
   ProfilePictureUpdateResult,
   UserImageRow,
   UserRow,
 } from "../types/user.types";
 
 export const userRepository = {
-  async insertUser(data: NewUserData): Promise<UserRow> {
+  async insertRegisteredUser(data: RegisterUserData): Promise<UserRow> {
+    // Extract data from payload
+    const {
+      name,
+      email,
+      age,
+      is_active,
+      bio,
+      balance,
+      preferences,
+      password_hash,
+    } = data;
+
+    // Send data to databse:
+
+    const result = await pool.query<UserRow>(
+      `INSERT INTO users (name, email, age, is_active, bio, balance, preferences, password_hash)
+   VALUES ($1, $2, $3, COALESCE($4, false), $5, COALESCE($6, 0), $7, $8)
+   RETURNING id, name, email, age, is_active, bio, balance, preferences, profile_picture_url, role, created_at`,
+      [
+        name,
+        email,
+        age,
+        is_active,
+        bio ?? null,
+        balance,
+        preferences ? JSON.stringify(preferences) : null,
+        password_hash,
+      ],
+    );
+
+    return result.rows[0];
+  },
+
+  async findAuthUserByEmail(
+    email: string,
+  ): Promise<AuthUserWithPassword | undefined> {
+    const result = await pool.query<AuthUserWithPassword>(
+      "SELECT id, name, email, age, balance, bio, preferences, is_active, profile_picture_url, role, password_hash, created_at FROM users WHERE email = $1",
+      [email],
+    );
+
+    return result.rows[0];
+  },
+
+  async insertUser(data: CreateUserSchemaType): Promise<UserRow> {
     const { name, email, age, is_active, bio, balance, preferences } = data;
-    const result = await pool.query(
+    const result = await pool.query<UserRow>(
       `INSERT INTO users (name, email, age, is_active, bio, balance, preferences) 
             VALUES ($1, $2, $3, COALESCE($4, false), $5, COALESCE($6, 0), $7) 
             RETURNING id, name, email, age, is_active, bio, balance, preferences, created_at`,
@@ -29,14 +75,14 @@ export const userRepository = {
   },
 
   async findAllUsers(): Promise<Array<UserRow>> {
-    const result = await pool.query(
+    const result = await pool.query<UserRow>(
       "SELECT id, name, email, age, balance, bio, preferences, is_active, profile_picture_url, created_at from users ORDER BY id",
     );
     return result.rows;
   },
 
   async findUserById(id: number): Promise<UserRow | undefined> {
-    const result = await pool.query(
+    const result = await pool.query<UserRow>(
       "SELECT id, name, email, age, balance, bio, preferences, is_active, profile_picture_url, created_at from users WHERE id=$1",
       [id],
     );
@@ -48,7 +94,7 @@ export const userRepository = {
     id: number,
     imageUrl: string,
   ): Promise<ProfilePictureUpdateResult | undefined> {
-    const result = await pool.query(
+    const result = await pool.query<ProfilePictureUpdateResult>(
       "UPDATE users SET profile_picture_url = $1 WHERE id = $2 RETURNING id, name, email, profile_picture_url",
       [imageUrl, id],
     );

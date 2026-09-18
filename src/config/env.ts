@@ -19,4 +19,6 @@ export const env = {
     apiKey: process.env.CLOUDINARY_API_KEY,
     apiSecret: process.env.CLOUDINARY_API_SECRET,
   },
+  // Session based login.
+  sessionSecret: process.env.SESSION_SECRET ?? "dev-secret-change-me",
 } as const;

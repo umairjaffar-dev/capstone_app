@@ -40,14 +40,7 @@ export async function getAllUsers(
 ) {
   try {
     const users = await userService.getAllUsers();
-
-    // res.cookie("token", "xuznd-fhdjdf-2342342-dfgdfg", {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === "production",
-    //   sameSite: "strict",
-    //   maxAge: 24 * 60 * 60 * 1000, // 1 day
-    // });
-
+    
     res.status(200).json({
       success: true,
       message: "Users fetched successfully",
@@ -63,20 +56,19 @@ export async function getUserById(
   res: Response,
   next: NextFunction,
 ) {
-  const parseResult = UserIdParamSchema.safeParse(req.params);
-
-  if (!parseResult.success) {
-    const fieldErrors = formatZodError(parseResult.error, req.params);
-    return res.status(400).json({
-      success: false,
-      error: "Validation failed",
-      details: fieldErrors,
-    });
-  }
-
   try {
-    const user = await userService.getUserById(parseResult.data.id);
+    const parseResult = UserIdParamSchema.safeParse(req.params);
 
+    if (!parseResult.success) {
+      const fieldErrors = formatZodError(parseResult.error, req.params);
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: fieldErrors,
+      });
+    }
+
+    const user = await userService.getUserById(parseResult.data.id);
     if (!user) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
@@ -128,9 +120,10 @@ export async function uploadUserProfilePicture(
     );
 
     if (!dbResult) {
-      return res
-        .status(404)
-        .json({ success: false, error: "File upload failed!" });
+      return res.status(404).json({
+        success: false,
+        error: "User not found while updating profile picture",
+      });
     }
 
     res.status(200).json({ success: true, data: dbResult });
@@ -140,7 +133,7 @@ export async function uploadUserProfilePicture(
 }
 
 export async function uploadUserImages(
-  req: Request,
+  req: Request<{ id: string }>,
   res: Response,
   next: NextFunction,
 ) {

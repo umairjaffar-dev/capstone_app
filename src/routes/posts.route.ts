@@ -4,11 +4,12 @@ import {
   deletePost,
   getUserAllPosts,
 } from "../controllers/post.controller";
+import { requiredAuth } from "../middlewares/auth.middleware";
 
 const postRouter = Router();
 
-postRouter.get("/posts", getUserAllPosts);
-postRouter.post("/posts", createPost);
-postRouter.delete("/posts/:id/", deletePost); // Get id from url path in controller.
+postRouter.get("/posts", requiredAuth, getUserAllPosts);
+postRouter.post("/posts", requiredAuth, createPost);
+postRouter.delete("/posts/:id/", requiredAuth, deletePost); // Get id from url path in controller.
 
 export default postRouter;
