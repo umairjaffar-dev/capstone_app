@@ -9,18 +9,8 @@ export interface UserRow {
   balance: string; // pg driver numeric(10,2) returns string by default.
   preferences: Record<string, unknown> | null;
   profile_picture_url: string | null;
+  role: string;
   created_at: Date;
-}
-
-// payload types while creating new user.
-export interface NewUserData {
-  name: string;
-  email: string;
-  age: number;
-  is_active?: boolean;
-  bio?: string;
-  balance?: number;
-  preferences?: Record<string, unknown>;
 }
 
 // Upload user profile image/picture return schema:

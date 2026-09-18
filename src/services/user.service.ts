@@ -1,5 +1,4 @@
 import { userRepository } from "../repositories/user.repository";
-import { CreateUserSchemaType } from "../schemas/user.schema";
 import {
   ProfilePictureUpdateResult,
   UserImageRow,
@@ -7,9 +6,6 @@ import {
 } from "../types/user.types";
 
 export const userService = {
-  async createUser(input: CreateUserSchemaType): Promise<UserRow> {
-    return userRepository.insertUser(input);
-  },
 
   async getAllUsers(): Promise<Array<UserRow>> {
     return userRepository.findAllUsers();
