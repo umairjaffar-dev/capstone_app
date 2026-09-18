@@ -1,37 +1,8 @@
 import { Request, Response, NextFunction } from "express";
-import { CreateUserSchema, UserIdParamSchema } from "../schemas/user.schema";
+import { UserIdParamSchema } from "../schemas/user.schema";
 import { storage } from "../services/storage/storage.service";
 import { formatZodError } from "../utils/formatZodError";
 import { userService } from "../services/user.service";
-
-export async function createUser(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  try {
-    const parseResult = CreateUserSchema.safeParse(req.body);
-
-    if (!parseResult.success) {
-      const fieldErrors = formatZodError(parseResult.error, req.body);
-      return res.status(400).json({
-        success: false,
-        error: "Validation failed",
-        details: fieldErrors,
-      });
-    }
-
-    const user = await userService.createUser(parseResult.data);
-
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      data: user,
-    });
-  } catch (error) {
-    next(error);
-  }
-}
 
 export async function getAllUsers(
   _req: Request,
@@ -40,7 +11,7 @@ export async function getAllUsers(
 ) {
   try {
     const users = await userService.getAllUsers();
-    
+
     res.status(200).json({
       success: true,
       message: "Users fetched successfully",
@@ -65,6 +36,18 @@ export async function getUserById(
         success: false,
         error: "Validation failed",
         details: fieldErrors,
+      });
+    }
+
+    // add self or admin check, so that only admin or user-itself get the user details. normal user can only get her/his profile details not others.
+    const targetUserId = parseResult.data.id;
+    const isAdmin = req.session.role === "admin";
+    const isSelf = req.session.userId === targetUserId;
+
+    if (!isAdmin && !isSelf) {
+      return res.status(403).json({
+        success: false,
+        error: "You can only view your own profile",
       });
     }
 
@@ -98,6 +81,16 @@ export async function uploadUserProfilePicture(
         success: false,
         error: "Validation failed",
         details: fieldErrors,
+      });
+    }
+
+    const targetUserId = parseResult.data.id;
+    const isSelf = req.session.userId === targetUserId;
+
+    if (!isSelf) {
+      return res.status(403).json({
+        success: false,
+        error: "You can only update your own profile picture",
       });
     }
 
@@ -148,6 +141,16 @@ export async function uploadUserImages(
       });
     }
 
+    const targetUserId = parseResult.data.id;
+    const isSelf = req.session.userId === targetUserId;
+
+    if (!isSelf) {
+      return res.status(403).json({
+        success: false,
+        error: "You can only upload images to your own profile",
+      });
+    }
+
     const files = req.files as Express.Multer.File[] | undefined;
 
     if (!files || files.length === 0) {
@@ -156,7 +159,7 @@ export async function uploadUserImages(
         .json({ success: false, error: "No image files provided" });
     }
 
-    const existingUser = await userService.getUserById(parseResult.data.id);
+    const existingUser = await userService.getUserById(targetUserId);
     if (!existingUser) {
       return res.status(404).json({ success: false, error: "User not found" });
     }
@@ -164,17 +167,14 @@ export async function uploadUserImages(
     const storedFiles = await storage.saveMany(files);
     const imageUrls = storedFiles.map((file) => file.url);
 
-    const images = await userService.addUserImages(
-      parseResult.data.id,
-      imageUrls,
-    );
+    const images = await userService.addUserImages(targetUserId, imageUrls);
 
     return res.status(201).json({
       success: true,
       message: "Images uploaded successfully",
 
       data: {
-        userId: parseResult.data.id,
+        userId: targetUserId,
         images: images.map((image) => image.image_url),
       },
     });

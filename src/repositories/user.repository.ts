@@ -1,6 +1,4 @@
 import { pool } from "../lib/db";
-import { logger } from "../lib/logger";
-import { CreateUserSchemaType } from "../schemas/user.schema";
 import { AuthUserWithPassword, RegisterUserData } from "../types/auth.types";
 import {
   ProfilePictureUpdateResult,
@@ -49,26 +47,6 @@ export const userRepository = {
     const result = await pool.query<AuthUserWithPassword>(
       "SELECT id, name, email, age, balance, bio, preferences, is_active, profile_picture_url, role, password_hash, created_at FROM users WHERE email = $1",
       [email],
-    );
-
-    return result.rows[0];
-  },
-
-  async insertUser(data: CreateUserSchemaType): Promise<UserRow> {
-    const { name, email, age, is_active, bio, balance, preferences } = data;
-    const result = await pool.query<UserRow>(
-      `INSERT INTO users (name, email, age, is_active, bio, balance, preferences) 
-            VALUES ($1, $2, $3, COALESCE($4, false), $5, COALESCE($6, 0), $7) 
-            RETURNING id, name, email, age, is_active, bio, balance, preferences, created_at`,
-      [
-        name,
-        email,
-        age,
-        is_active,
-        bio ?? null,
-        balance,
-        preferences ? JSON.stringify(preferences) : null,
-      ],
     );
 
     return result.rows[0];

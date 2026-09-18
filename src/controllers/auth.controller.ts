@@ -58,6 +58,7 @@ export async function loginUserController(
     }
 
     req.session.userId = user.id;
+    req.session.role = user.role;
 
     res.status(200).json({
       success: true,
@@ -67,4 +68,22 @@ export async function loginUserController(
   } catch (error) {
     next(error);
   }
+}
+
+export function logoutUserController(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  req.session.destroy((error) => {
+    if (error) {
+      return next(error);
+    }
+
+    res.clearCookie("connect.sid");
+    res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+  });
 }
