@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "dist/server.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
   "scripts": {
     "dev": "tsx --watch src/server.ts",
     "build": "tsc",
@@ -10,10 +14,6 @@
     "migrate": "node-pg-migrate",
     "migrate:prod": "dotenv -e .env.production -- node-pg-migrate up"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/connect-pg-simple": "^7.0.3",

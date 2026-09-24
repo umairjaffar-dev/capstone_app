@@ -4,6 +4,7 @@ import { logger } from "./logger";
 
 export const pool = new Pool({
   connectionString: env.databaseUrl,
+  connectionTimeoutMillis: 20_000,
 });
 
 pool.on("error", (err) => {
