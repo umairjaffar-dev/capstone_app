@@ -9,11 +9,11 @@ export const shorthands = undefined;
  * @returns {Promise<void> | void}
  */
 export const up = (pgm) => {
-  pgm.sql("TRUNCATE TABLE users RESTART IDENTITY CASCADE;");
+  // pgm.sql("TRUNCATE TABLE users RESTART IDENTITY CASCADE;");
 
   pgm.addColumn("users", {
-    password_hash: { type: "text", notNull: true },
     role: { type: "varchar(20)", notNull: true, default: "user" },
+    password_hash: { type: "text", notNull: false },
   });
 };
 
@@ -23,5 +23,5 @@ export const up = (pgm) => {
  * @returns {Promise<void> | void}
  */
 export const down = (pgm) => {
-  pgm.dropColumn("users", ["password_hash", "role"]);
+  pgm.dropColumn("users", ["role", "password_hash"]);
 };
